@@ -12,34 +12,41 @@ import Navbar from "../components/Navbar";
 import { useState } from "react";
 import Hero from "../components/Hero";
 import FeatureCard from "../components/FeatureCard";
+import ProjectDisplay from "../components/ProjectDisplay";
+import { generateProject as generateProjectAPI } from "../services/projectService";
+import type { ProjectResponse } from "../services/projectService";
 
 export default function LandingPage() {
   const [role, setRole] = useState("");
   const [experience, setExperience] = useState("");
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<ProjectResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const generateProject = async () => {
+    if (!role.trim() || !experience.trim()) {
+      setError("Please fill in both role and experience level.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setProject(null);
+
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/projects/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ role, experience }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch project data");
-      }
-
-      const data = await response.json();
+      const data = await generateProjectAPI({ role, experience });
       setProject(data);
-    } catch (error) {
-      console.error(error);
-      alert("Error generating project. Please try again.");
+    } catch (err) {
+      setError("Failed to generate project. Please try again.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      generateProject();
     }
   };
 
@@ -96,49 +103,80 @@ export default function LandingPage() {
       {/* Hero section with Project Generator inside */}
       <Hero>
         {/* Project Generator inside Hero for better UX */}
-        <section className="py-20 bg-slate-900">
+        <section className="py-20 bg-gradient-to-b from-slate-900 to-slate-950">
           <div className="max-w-4xl mx-auto px-4">
-            <h2 className="text-4xl font-bold text-white mb-8">AI Project Generator</h2>
+            <h2 className="text-4xl font-bold text-white mb-2">
+              🤖 AI Project Generator
+            </h2>
+            <p className="text-slate-400 mb-8">
+              Generate personalized, production-ready projects based on your role and experience level
+            </p>
 
-            {/* Role Input */}
-            <input
-              type="text"
-              placeholder="Backend Developer"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white placeholder:text-slate-400 mb-4"
-            />
+            {/* Input Section */}
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/50 p-6 backdrop-blur-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Role Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Your Role
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Backend Developer"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  />
+                </div>
 
-            {/* Experience Input */}
-            <input
-              type="text"
-              placeholder="Fresher"
-              value={experience}
-              onChange={(e) => setExperience(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white placeholder:text-slate-400 mb-4"
-            />
+                {/* Experience Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Experience Level
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Intermediate"
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  />
+                </div>
+              </div>
 
-            {/* Generate Button */}
-            <button
-              onClick={generateProject}
-              className="w-full bg-purple-600 px-6 py-3 rounded text-white hover:bg-purple-700 transition"
-            >
-              Generate Project
-            </button>
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 rounded-lg bg-red-500/20 border border-red-500/50 p-3 text-red-300 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Generate Button */}
+              <button
+                onClick={generateProject}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 px-6 py-3 rounded-lg text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Generate Project
+                  </>
+                )}
+              </button>
+            </div>
 
             {/* Display project data */}
             {project && (
-              <div className="mt-8 rounded-2xl border border-slate-700 bg-slate-900 p-6">
-                <h3 className="text-2xl font-bold mb-4">{project.project_name}</h3>
-                <p className="text-slate-300 mb-4">{project.description}</p>
-                <div className="mb-4">
-                  <span className="font-semibold">Sprint Goal:</span> {project.sprint_goal}
-                </div>
-                <ul className="space-y-2">
-                  {project.tasks?.map((task: string, index: number) => (
-                    <li key={index} className="rounded-lg bg-slate-800 p-3">{task}</li>
-                  ))}
-                </ul>
+              <div className="mt-8">
+                <ProjectDisplay project={project} />
               </div>
             )}
           </div>

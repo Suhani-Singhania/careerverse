@@ -1,10 +1,17 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Hero from "../components/Hero";
+
+interface ProjectPreview {
+  project_name: string;
+  description: string;
+  sprint_goal: string;
+  tasks: string[];
+}
 
 export default function Home() {
   const [role, setRole] = useState("");
   const [experience, setExperience] = useState("");
-  const [project, setProject] = useState(null);
+  const [project, setProject] = useState<ProjectPreview | null>(null);
 
   const generateProject = () => {
     // Dummy data for the project, replace with your API call
@@ -62,7 +69,7 @@ export default function Home() {
                 <span className="font-semibold">Sprint Goal:</span> {project.sprint_goal}
               </div>
               <ul className="space-y-2">
-                {project.tasks?.map((task, index) => (
+                {project.tasks.map((task, index) => (
                   <li key={index} className="rounded-lg bg-slate-800 p-3">{task}</li>
                 ))}
               </ul>

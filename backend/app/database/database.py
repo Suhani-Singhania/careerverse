@@ -2,41 +2,21 @@
 import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from dotenv import load_load
+from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
 
-# Load environment variables
-load_load()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/careerverse")
+load_dotenv()
 
-# Create High-Performance Async Engine
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False, # Set to True if you need to debug raw SQL queries in development
-    future=True,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True
-)
+MONGODB_URL = os.getenv("MONGODB_URL")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "careerverse")
 
-# Async Session Factory
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False
-)
+if not MONGODB_URL:
+    raise RuntimeError("MONGODB_URL is missing in backend/.env")
 
-# Dependency Provider for Database Sessions
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI Dependency that yields an async database session and ensures cleanup."""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+client = AsyncIOMotorClient(MONGODB_URL)
+database = client[MONGODB_DB_NAME]
+
+
+async def get_db():
+    yield database

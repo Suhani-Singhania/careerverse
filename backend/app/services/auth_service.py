@@ -1,12 +1,14 @@
 # backend/app/services/auth_service.py
 import os
+import random
 import bcrypt
 import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from dotenv import load_load
+from dotenv import load_dotenv
 
-load_load()
+# Load environment variables
+load_dotenv()
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super_secret_enterprise_crypto_key_change_in_production_2026")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
@@ -24,6 +26,25 @@ class AuthService:
         """Verifies a plain-text password against a stored hash."""
         return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
+    @staticmethod
+    def generate_otp() -> str:
+        """Generate a 6-digit OTP."""
+        return str(random.randint(100000, 999999))
+
+    @staticmethod
+    def hash_otp(otp: str) -> str:
+        """Hash OTP before saving it to database."""
+        salt = bcrypt.gensalt(rounds=12)
+        return bcrypt.hashpw(otp.encode("utf-8"), salt).decode("utf-8")
+
+    @staticmethod
+    def verify_otp(plain_otp: str, hashed_otp: str) -> bool:
+        """Verify plain OTP against hashed OTP."""
+        return bcrypt.checkpw(
+            plain_otp.encode("utf-8"),
+            hashed_otp.encode("utf-8")
+        )
+        
     @staticmethod
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
         """Generates a secure state-less JWT access token."""
