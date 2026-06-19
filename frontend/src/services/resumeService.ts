@@ -1,6 +1,5 @@
 import { getToken } from "./authService";
-
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "./apiConfig";
 
 export interface ResumeAnalysisResponse {
   score: number;

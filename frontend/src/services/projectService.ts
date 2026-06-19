@@ -1,7 +1,6 @@
 // services/projectService.ts
 import { getToken } from "./authService";
-
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "./apiConfig";
 
 export interface ProjectRequest {
   role: string;
@@ -27,8 +26,8 @@ export interface ProjectResponse {
     method: string;
     path: string;
     description: string;
-    request_body: Record<string, any>;
-    response: Record<string, any>;
+    request_body: Record<string, unknown>;
+    response: Record<string, unknown>;
   }>;
   tasks: string[];
   resume_bullets: string[];
