@@ -2,6 +2,9 @@ import { useState } from "react";
 import {
   Mail,
   Lock,
+  Eye,
+  EyeOff,
+  User,
   Sparkles,
   Bot,
   FileText,
@@ -11,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   forgotPassword,
+  fetchCurrentUser,
   loginUser,
   registerUser,
   resendOtp,
@@ -52,7 +56,9 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
 const [step, setStep] = useState<"credentials" | "otp" | "forgot" | "reset">("credentials");
 const [newPassword, setNewPassword] = useState("");
 const [email, setEmail] = useState("");
+const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -64,20 +70,25 @@ const [email, setEmail] = useState("");
       return;
     }
 
+    if (mode === "register" && !name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setMessage("");
 
     try {
       if (mode === "register") {
-        await registerUser({ email, password });
+        await registerUser({ email, password, name: name.trim() });
       }
 
       const result = await loginUser({ email, password });
 
       if (result.requires_otp) {
         setStep("otp");
-        setMessage("OTP sent. Check your email or backend terminal.");
+        setMessage("OTP sent. Check your email inbox.");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
@@ -99,6 +110,7 @@ const [email, setEmail] = useState("");
     try {
       const result = await verifyOtp({ email, otp });
       saveToken(result.access_token);
+      await fetchCurrentUser();
       onLogin();
     } catch (err) {
       setError(err instanceof Error ? err.message : "OTP verification failed");
@@ -114,7 +126,7 @@ const [email, setEmail] = useState("");
 
     try {
       await resendOtp(email);
-      setMessage("New OTP sent. Check your email or backend terminal.");
+      setMessage("New OTP sent. Check your email inbox.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resend OTP");
     } finally {
@@ -323,6 +335,28 @@ async function handleResetPassword() {
 
             {step === "credentials" ? (
               <div className="space-y-4">
+                {mode === "register" && (
+                  <div>
+                    <label
+                      htmlFor="name"
+                      className="mb-2 block text-sm font-semibold text-slate-300"
+                    >
+                      Full Name
+                    </label>
+                    <div className="relative">
+                      <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                      <input
+                        id="name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-10 py-3 text-white outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25"
+                        placeholder="Your name"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label
                     htmlFor="email"
@@ -364,12 +398,24 @@ async function handleResetPassword() {
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                     <input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-10 py-3 text-white outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-10 py-3 pr-12 text-white outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25"
                       placeholder="Enter your password"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-300"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -411,6 +457,7 @@ async function handleResetPassword() {
                   <button
                     onClick={() => {
                       setMode(isLogin ? "register" : "login");
+                      setName("");
                       setError("");
                       setMessage("");
                     }}

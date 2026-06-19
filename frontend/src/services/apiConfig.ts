@@ -1,2 +1,5 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://careerverse-g78a.onrender.com";
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV
+    ? "http://localhost:8000"
+    : "https://careerverse-g78a.onrender.com");

@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
+import asyncio
 
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.database.database import get_db
+from app.api.deps import get_current_user
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -46,6 +48,7 @@ async def register_user(
 
     new_user = {
         "email": user.email,
+        "name": user.name.strip(),
         "hashed_password": hashed_password,
         "created_at": datetime.utcnow(),
     }
@@ -55,6 +58,7 @@ async def register_user(
     return {
         "id": str(result.inserted_id),
         "email": user.email,
+        "name": user.name.strip(),
     }
 
 
@@ -99,7 +103,7 @@ async def login_user(
         }
     )
 
-    EmailService.send_otp_email(user.email, otp)
+    await asyncio.to_thread(EmailService.send_otp_email, user.email, otp)
 
     return {
         "message": "OTP sent to your email",
@@ -158,6 +162,7 @@ async def verify_otp(
     token = AuthService.create_access_token({
         "sub": str(existing_user["_id"]),
         "email": existing_user["email"],
+        "name": existing_user.get("name", ""),
     })
 
     await db.users.update_one(
@@ -218,7 +223,7 @@ async def resend_otp(
         }
     )
 
-    EmailService.send_otp_email(data.email, otp)
+    await asyncio.to_thread(EmailService.send_otp_email, data.email, otp)
 
     return {
         "message": "OTP resent to your email",
@@ -254,7 +259,7 @@ async def forgot_password(
         }
     )
 
-    EmailService.send_otp_email(data.email, otp)
+    await asyncio.to_thread(EmailService.send_otp_email, data.email, otp)
 
     return {
         "message": "If this email exists, a reset code has been sent."
@@ -327,4 +332,13 @@ async def reset_password(
 
     return {
         "message": "Password reset successful. You can now login."
+    }
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "email": current_user["email"],
+        "name": current_user.get("name", ""),
     }

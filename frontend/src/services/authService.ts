@@ -5,6 +5,16 @@ export interface AuthRequest {
   password: string;
 }
 
+export interface RegisterRequest extends AuthRequest {
+  name: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+}
+
 export interface OTPVerifyRequest {
   email: string;
   otp: string;
@@ -20,7 +30,7 @@ export interface TokenResponse {
   token_type: string;
 }
 
-export async function registerUser(data: AuthRequest) {
+export async function registerUser(data: RegisterRequest) {
   const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
     method: "POST",
     headers: {
@@ -92,12 +102,50 @@ export function saveToken(token: string) {
   localStorage.setItem("careerverse_token", token);
 }
 
+export function saveUserProfile(user: UserProfile) {
+  localStorage.setItem("careerverse_user", JSON.stringify(user));
+}
+
+export function getUserProfile(): UserProfile | null {
+  const raw = localStorage.getItem("careerverse_user");
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as UserProfile;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchCurrentUser(): Promise<UserProfile> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to load profile");
+  }
+
+  const user = await response.json();
+  saveUserProfile(user);
+  return user;
+}
+
 export function getToken() {
   return localStorage.getItem("careerverse_token");
 }
 
 export function logout() {
   localStorage.removeItem("careerverse_token");
+  localStorage.removeItem("careerverse_user");
 }
 
 export async function forgotPassword(email: string) {

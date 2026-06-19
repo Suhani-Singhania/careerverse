@@ -18,6 +18,11 @@ import {
 import ProjectDisplay from "../components/ProjectDisplay";
 import { getProjectHistory } from "../services/projectService";
 import { analyzeResume } from "../services/resumeService";
+import {
+  fetchCurrentUser,
+  getUserProfile,
+  type UserProfile,
+} from "../services/authService";
 import type { ResumeAnalysisResponse } from "../services/resumeService";
 import type { ProjectHistoryItem } from "../services/projectService";
 
@@ -27,6 +32,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onHome, onLogout }: DashboardProps) {
+  const [user, setUser] = useState<UserProfile | null>(getUserProfile());
   const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectHistoryItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,8 +130,21 @@ export default function Dashboard({ onHome, onLogout }: DashboardProps) {
       }
     }
 
+    async function loadUser() {
+      try {
+        const profile = await fetchCurrentUser();
+        setUser(profile);
+      } catch (error) {
+        console.error("Failed to load user profile", error);
+      }
+    }
+
     loadHistory();
+    loadUser();
   }, []);
+
+  const displayName = user?.name?.trim() || user?.email?.split("@")[0] || "there";
+  const displayInitial = displayName.charAt(0).toUpperCase();
 
   const handleAnalyzeResume = async () => {
   if (!resumeFile) {
@@ -211,11 +230,11 @@ export default function Dashboard({ onHome, onLogout }: DashboardProps) {
             <div className="rounded-xl border border-slate-700 bg-[#0b1630] p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 font-bold">
-                  S
+                  {displayInitial}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Suhani</p>
-                  <p className="text-xs text-slate-400">suhani@example.com</p>
+                  <p className="text-sm font-semibold">{displayName}</p>
+                  <p className="text-xs text-slate-400">{user?.email ?? ""}</p>
                 </div>
               </div>
 
@@ -250,7 +269,7 @@ export default function Dashboard({ onHome, onLogout }: DashboardProps) {
               <div className="flex items-center gap-3">
                 <Sparkles className="h-8 w-8 text-yellow-300" />
                 <h1 className="text-3xl font-bold tracking-tight text-white">
-                  Welcome back, Suhani!
+                  Welcome back, {displayName}!
                 </h1>
               </div>
               <p className="mt-2 text-slate-400">
@@ -282,10 +301,11 @@ export default function Dashboard({ onHome, onLogout }: DashboardProps) {
                         } else {
                           setActiveSection(card.section);
                         }
-                      }}                       
+                      }}
+                      aria-label={`Open ${card.title}`}
                        className={`rounded-full p-3 ${card.button}`}
                       >
-                        <ArrowRight className="h-5 w-5" />
+                        <ArrowRight className="h-5 w-5" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -450,6 +470,7 @@ export default function Dashboard({ onHome, onLogout }: DashboardProps) {
                     <button
                       key={item.id}
                       onClick={() => setSelectedProject(item)}
+                      aria-label={`View project ${item.project_name}`}
                       className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-700 bg-[#101b33] p-4 text-left transition hover:border-purple-500/60 hover:bg-slate-800"
                     >
                       <div className="flex items-center gap-4">
@@ -477,7 +498,7 @@ export default function Dashboard({ onHome, onLogout }: DashboardProps) {
                         <span className="rounded-lg bg-purple-700 px-4 py-2 font-semibold text-white">
                           View
                         </span>
-                        <MoreVertical className="h-5 w-5" />
+                        <MoreVertical className="h-5 w-5" aria-hidden="true" />
                       </div>
                     </button>
                   ))}
